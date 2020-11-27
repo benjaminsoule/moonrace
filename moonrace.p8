@@ -318,7 +318,7 @@ function init_game()
 	   e.tbl,sc.ship,sc.frags,sc.death,sc.finish=sc,e,0,0
 	  end
 	 end
-	 e.acc,e.steer,e.brake,e.cross,e.wcd,e.hull,e.ia=f"0",f"1",f"2",f"3",f"4",f"5",true
+	 e.acc,e.steer,e.brake,e.cross,e.wcd,e.hull=f"0",f"1",f"2",f"3",f"4",f"5"
 	 
 	 reset_weapon(e)
 	 e.weap+=rand"3"-3
@@ -339,14 +339,14 @@ function init_game()
  --
  for w in all(windows) do
   w.trg=players[w.sel+1]
-  w.trg.hum,w.trg.ia=w.pid
+  w.trg.hum=w.pid
   w.trg.weap/=2
  end
  
  --
  if mode==2 then
   for p in all(players) do
-   if p.ia then
+   if p.hum then
     kl(p)    
    end  
   end
@@ -605,6 +605,8 @@ function fg(x,y,fl)
 end
 
 function upd_car(e)
+ function bh(n) return bhv[n+e.pid*3] end
+ 
 
  local tx,ty,px,py,road=e.nwp.x,e.nwp.y,e.x/8,e.y/8
  local road,heal_pad=fg(px,py,5),fg(px,py,3)
@@ -614,7 +616,7 @@ function upd_car(e)
 	 local d1,d2,d=dist(e.x,e.y,w.x,w.y),dist(e.x,e.y,w.px,w.py),dist(w.x,w.y,w.px,w.py)  
 	 local t=(d1*d1-d2*d2)/d+d
 	 t/=2
-	 local al=mid(-3,t/d,3)
+	 local al=mid(-bh(3),t/d,bh(3)) -- -4
 	 tx,ty=w.px*al+(1-al)*w.x,w.py*al+(1-al)*w.y
   e.offroad,e.dp=0,1
  elseif space then
@@ -636,7 +638,7 @@ function upd_car(e)
   if e.nwp==fwp then
    e.lap+=1   
    if e.lap==3 then
-    e.ia,e.tbl.finish=true,true
+    e.tbl.finish=true
     finish_count+=1
    end
   end
@@ -661,11 +663,11 @@ function upd_car(e)
   e.an+=mid(-e.steer,da,e.steer) 
  end
 
- -- control 
+ -- 
  local shoot 
- if e.ia then  
+ if not e.hum or e.tbl.finish then  
   -- control
-  e.thrust=abs(da)<bhv[1+e.pid*2] and e.spd<sqrt(dd)/bhv[2+e.pid*2] and not (heal_pad and e.hull<e.hull_max/2 and e.lap<3-1)
+  e.thrust=abs(da)<bh(1) and e.spd<sqrt(dd)/bh(2) and not (heal_pad and e.hull<e.hull_max/2 and e.lap<3-1)
   -- fire
   function e:aim(tda_mind_maxd)
 		 local tda,mind,maxd,res=un_sp(tda_mind_maxd)
@@ -770,7 +772,7 @@ function upd_car(e)
   e.weap+=1
   if e.weap>=0 then   
    e.weap=rnd(sweap[e.pid+1])
-   --e.weap=e.ia and 1 or 2
+   --e.weap=0
   end
  end
  
@@ -864,7 +866,7 @@ end
 
 function reset_weapon(e)
  e.weap=-e.wcd
- if e.ia then e.weap*=2 end
+ if not e.hum then e.weap*=2 end
 end
 
 function respawn(e,t)
@@ -957,7 +959,8 @@ end
 function fire_mis(sh,mt)
  mfunc"sfx,7,-1,0,2"
  local e=mke(0,sh.x,sh.y+sh.z)
- e.vx,e.vy=cos(sh.an)+sh.vx,sin(sh.an)+sh.vy 
+ local spd=sh.spd+2
+ e.vx,e.vy=cos(sh.an)*spd,sin(sh.an)*spd 
  e.from,e.dmg,e.br=sh,5,8
  e.dr=function(e,x,y)
   circfill(x,y,1+t2*2,sget(125+t2,8+e.missile))
@@ -1342,12 +1345,9 @@ function ecol(e,dx,dy)
 end
 
 function _update()
- mult=full_ia and btn"4" and 10 or 1
- for i=1,mult do
-	 t+=1
-  t42,t16,t8,t2=t%4<2,t%16,t%8,t%2
-	 foreach(ents,upe)
- end
+ t+=1
+ t42,t16,t8,t2=t%4<2,t%16,t%8,t%2
+ foreach(ents,upe)
 end
 
 function _draw()
@@ -1443,9 +1443,9 @@ end
 -->8
 -- data
 map_ws,map_xs,path,ships,sweap,chars,bhv,caracs,ship_names,s_desc,pp=split"32,40,56",split"0,32,72",mspl[[
-129,18,207,18,225,22,230,37,225,54,210,58,149,58,133,63,128,77,130,122,141,135,160,145,208,144,225,149,231,162,232,211,228,228,215,237,169,234,121,213,99,213,83,229,22,229,13,211,12,185,18,173,32,175,45,181,62,181,73,168,73,154,67,144,51,135,22,79,20,40,25,24,40,18&
-105,17,118,17,138,37,139,58,142,81,148,98,155,107,169,111,181,109,190,101,191,75,196,56,232,18,262,16,272,23,276,40,263,57,259,65,256,79,253,96,252,120,252,173,257,202,264,211,289,211,295,201,296,176,289,166,207,155,169,213,162,221,137,221,130,214,128,168,113,163,96,164,57,210,48,214,37,216,24,211,17,202,18,167,21,152,29,135,76,91,76,63,67,57,23,57,14,44,15,24,24,17,67,17&
-285,167,289,167,298,167,307,175,312,187,305,213,298,222,287,228,267,228,169,228,145,229,121,231,97,233,74,232,45,222,30,206,22,184,24,156,29,128,25,103,17,78,20,54,34,43,51,38,67,40,81,47,91,61,81,84,89,114,113,124,144,129,184,127,202,117,215,103,220,92,229,84,247,75,266,82,276,101,294,104,312,93,333,82,351,85,359,104,359,128,357,150,356,173,358,197,368,214,381,221,402,221,414,210,422,192,422,96,419,76,413,63,399,47,376,32,333,29,310,28,287,28,268,26,249,25,230,19,214,14,192,11,177,16,164,30,163,47,160,67,155,100,150,126,152,140,158,154,166,161,176,167,228,167
+129,17,199,17,215,17,228,24,233,38,226,53,212,58,149,58,133,63,128,77,130,122,141,135,160,145,208,144,225,149,231,162,232,211,228,228,215,237,169,234,121,213,99,213,83,229,22,229,13,211,12,185,18,173,32,175,45,181,62,181,73,168,73,154,67,144,51,135,22,79,20,40,25,24,40,17&
+105,17,122,17,139,38,139,58,142,81,148,98,155,110,169,116,181,111,191,101,191,75,195,57,232,18,262,16,276,23,278,42,265,60,252,79,247,96,248,136,251,178,254,204,264,220,289,219,301,202,301,178,290,159,268,157,207,157,180,186,171,215,159,226,141,226,130,214,128,168,113,158,96,164,57,210,48,216,34,216,22,213,15,198,20,151,28,137,77,94,86,77,81,61,66,55,23,57,9,43,12,24,24,17,67,17&
+228,167,285,167,299,168,309,176,314,194,308,213,290,228,267,228,169,228,134,230,97,233,66,231,43,223,27,206,22,184,24,156,29,128,25,103,17,78,20,54,34,41,51,35,67,37,81,44,91,61,81,84,85,114,113,124,144,129,184,127,206,120,220,92,229,80,247,72,266,82,276,101,294,108,312,96,329,82,343,76,357,85,359,104,359,150,359,197,367,215,381,224,402,225,417,210,422,192,422,96,419,76,413,61,399,44,376,30,325,26,275,26,249,25,214,16,192,11,174,16,162,32,160,67,155,100,152,140,158,159,178,168
 ]],mspl[[
 	2,2,3,3,3,3&
 	3,2,1,3,1,2&
@@ -1464,25 +1464,24 @@ map_ws,map_xs,path,ships,sweap,chars,bhv,caracs,ship_names,s_desc,pp=split"32,40
 	
 	5,6,3,4&
 	0,5,2,1&
-	2,1,6,4&
+	0,2,6,4&
 	5,6,6,3
 ]],split[[
 .13,.15,.18,.21,
 .012,.016,.02,.024,
 .95,.93,.9,.85,
 .6,.75,.85,.92,
-20,12,8,5,
-8,12,16,20,
+20,12,8,6,
+9,12,16,20,
 ]],split[[
-.15,2,
-.15,2,
-.15,2,
-.15,2,
-
-.15,2,
-.15,2,
-.15,2,
-.1,1.5,
+.15,1.75,6,
+.15,1.2,16,
+.1,1,5,
+.5,2,4,
+.1,2,1,
+.15,1.75,4,
+.15,1.2,4,
+.1,1.5,4,
 ]],split"accel,steer,brake,cross,fight,armor",split
 [[ fireant
 , caramelo
